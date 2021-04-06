@@ -46,6 +46,7 @@ jspm_packages
 
 #next.js
 .next
+.history
 
 #vscode
 .vscode

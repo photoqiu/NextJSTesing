@@ -1,3 +1,11 @@
+/*
+ * @Author: ext.qiubo
+ * @Date: 2021-04-06 08:31:28
+ * @LastEditTime: 2021-04-06 08:47:40
+ * @LastEditors: ext.qiubo
+ * @FilePath: \NextJSTesing\next.config.js
+ * @version: 
+ */
 const withLess = require('@zeit/next-less')
 
 module.exports = withLess({
@@ -10,7 +18,6 @@ module.exports = withLess({
 
 module.exports = {
     webpack: config => {
-        // Fixes npm packages that depend on `fs` module
         config.node = {
             fs: 'empty'
         }
