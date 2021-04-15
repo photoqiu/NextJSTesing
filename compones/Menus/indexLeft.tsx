@@ -103,7 +103,7 @@ const IndexLeft: React.FC<Datas> = (props) => {
                                     index % 2 === 0 ?  <GridOn /> : <MenuIcon />
                                 }
                             </ListItemIcon>
-                            <ListItemLink href="#simple-list">
+                            <ListItemLink href="/login">
                                 <ListItemText primary={text} />
                             </ListItemLink>
                         </ListItem>
@@ -120,7 +120,7 @@ const IndexLeft: React.FC<Datas> = (props) => {
                                     index % 2 === 0 ?  <GridOn /> : <MenuIcon />
                                 }
                             </ListItemIcon>
-                            <ListItemLink href="#simple-list">
+                            <ListItemLink href="/login">
                                 <ListItemText primary={text} />
                             </ListItemLink>
                         </ListItem>

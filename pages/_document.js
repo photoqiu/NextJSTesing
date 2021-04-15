@@ -1,3 +1,11 @@
+/*
+ * @Author: ext.qiubo
+ * @Date: 2021-04-06 08:31:28
+ * @LastEditTime: 2021-04-09 15:52:00
+ * @LastEditors: ext.qiubo
+ * @FilePath: \Mock_NodeJs_Interfaced:\Project\FE\NextJSTesing\pages\_document.js
+ * @version: 
+ */
 import React from 'react'
 import NextDocument, { Html, Head, Main, NextScript } from 'next/document'
 import {
@@ -12,7 +20,6 @@ export default class Document extends NextDocument {
         const styledComponentSheet = new StyledComponentSheets()
         const materialUiSheets = new MaterialUiServerStyleSheets()
         const originalRenderPage = ctx.renderPage
-
         try {
             ctx.renderPage = () =>
                 originalRenderPage({
@@ -48,7 +55,7 @@ export default class Document extends NextDocument {
     }
     render() {
         return (
-            <Html lang="zh-CN" class="ua-windows ua-webkit">
+            <Html lang="zh-CN" className="ua-windows ua-webkit">
                 <Head />
                 <body>
                     <Main />

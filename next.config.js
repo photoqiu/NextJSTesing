@@ -1,7 +1,7 @@
 /*
  * @Author: ext.qiubo
  * @Date: 2021-04-06 08:31:28
- * @LastEditTime: 2021-04-06 08:47:40
+ * @LastEditTime: 2021-04-15 14:08:44
  * @LastEditors: ext.qiubo
  * @FilePath: \NextJSTesing\next.config.js
  * @version: 
@@ -22,20 +22,11 @@ module.exports = {
             fs: 'empty'
         }
         return config
-    }
-}
-
-module.exports = {
-    future: {
-        webpack5: true
-    }
-}
-
-module.exports = {
+    },
+    // future: {
+    //     webpack5: true
+    // },
     productionBrowserSourceMaps: true,
-}
-
-module.exports = {
     typescript: {
         ignoreBuildErrors: true
     }

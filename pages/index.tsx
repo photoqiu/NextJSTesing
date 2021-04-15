@@ -64,7 +64,7 @@ const IndexPage:React.FC = () => {
     let [datas, setDatas] = useState({
         title: "我的网站首页",
         keyword: "blog, fe, 前端开发, 技术博客",
-        descript: "我的网站首页--一个职业前端从业者的故事"
+        descript: "我的网站首页--职业前端从业者的故事"
     });
     let [menusDatas, setMenusDatas] = useState(CateDatas);
 
