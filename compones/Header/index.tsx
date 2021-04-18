@@ -1,7 +1,7 @@
 /*
  * @Author: ext.qiubo
  * @Date: 2021-04-06 08:31:28
- * @LastEditTime: 2021-04-15 17:38:47
+ * @LastEditTime: 2021-04-16 20:00:39
  * @LastEditors: ext.qiubo
  * @FilePath: \NextJSTesing\compones\Header\index.tsx
  * @version: 
@@ -13,7 +13,11 @@ interface Datas {
     descript: string;
 }
 
-const Header: React.FC<Datas> = (props) => {
+interface headerDatas {
+    headers: Datas;
+}
+
+const Header: React.FC<headerDatas> = (props) => {
     const { headers } = props
     return (
         <>

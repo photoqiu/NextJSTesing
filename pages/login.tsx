@@ -1,12 +1,12 @@
 /*
  * @Author: ext.qiubo
  * @Date: 2021-04-15 14:30:53
- * @LastEditTime: 2021-04-15 21:04:14
+ * @LastEditTime: 2021-04-16 17:00:48
  * @LastEditors: ext.qiubo
  * @FilePath: \NextJSTesing\pages\login.tsx
  * @version: 
  */
-import React, { useState, useEffect, useRef, isValidElement } from "react";
+import React, { useState, useEffect, useRef, forwardRef } from "react";
 import Header from "../compones/Header/index";
 import CopyRight from "../compones/Footer/index";
 import Avatar from "@material-ui/core/Avatar";
@@ -25,20 +25,14 @@ import Container from "@material-ui/core/Container";
 import IconButton from '@material-ui/core/IconButton';
 import Input from '@material-ui/core/Input';
 import FilledInput from '@material-ui/core/FilledInput';
+import FormHelperText from '@material-ui/core/FormHelperText';
 import OutlinedInput from '@material-ui/core/OutlinedInput';
 import InputLabel from '@material-ui/core/InputLabel';
 import InputAdornment from '@material-ui/core/InputAdornment';
-import FormHelperText from '@material-ui/core/FormHelperText';
 import FormControl from '@material-ui/core/FormControl';
 import Visibility from '@material-ui/icons/Visibility';
 import VisibilityOff from '@material-ui/icons/VisibilityOff';
-interface State {
-    amount: string;
-    password: string;
-    weight: string;
-    weightRange: string;
-    showPassword: boolean;
-}
+
 const useStyles = makeStyles((theme: Theme) => 
     createStyles({
         paper: {
@@ -60,6 +54,76 @@ const useStyles = makeStyles((theme: Theme) =>
         }
     })
 );
+interface mailHandler {
+    handleChange: any;
+    isMail:boolean;
+}
+
+const UserMail: React.FC<mailHandler> = forwardRef((props, ref) => {
+    const { handleChange, isMail } = props
+    return (
+        <TextField
+            variant="outlined"
+            margin="normal"
+            error={!isMail}
+            required
+            fullWidth
+            type="email"
+            id="email"
+            label="Email Address"
+            name="email"
+            autoComplete="email"
+            autoFocus
+            onChange={e => handleChange(e)}
+        />
+    )
+})
+
+
+interface pwdHandler {
+    handleChange: any;
+    isPassword:boolean;
+    formValues:pwdDatas;
+    handleClickShowPassword: any;
+    handleMouseDownPassword: any;
+}
+
+interface pwdDatas {
+    showPassword: string;
+    password: string;
+}
+
+const UserPassInput: React.FC<pwdHandler> = forwardRef((props, ref) => {
+    const { handleChange, formValues, isPassword, handleClickShowPassword, handleMouseDownPassword } = props
+    return (
+        <FormControl variant="outlined" fullWidth>
+            <InputLabel htmlFor="outlined-adornment-password">Password</InputLabel>
+            <OutlinedInput
+                id="outlined-adornment-password"
+                fullWidth
+                required
+                type={formValues.showPassword ? 'text' : 'password'}
+                value={formValues.password}
+                error={!isPassword}
+                name="password"
+                onChange={e => handleChange(e)}
+                endAdornment={
+                    <InputAdornment position="end">
+                    <IconButton
+                        aria-label="显示/隐藏，密码输入框"
+                        onClick={handleClickShowPassword}
+                        onMouseDown={handleMouseDownPassword}
+                        edge="end"
+                    >
+                        {formValues.showPassword ? <Visibility /> : <VisibilityOff />}
+                    </IconButton>
+                    </InputAdornment>
+                }
+                labelWidth={70}
+            />
+        </FormControl>
+    )
+})
 
 export const Login = () => {
     const form:any = useRef(null);
@@ -68,6 +132,7 @@ export const Login = () => {
 	useEffect(() => {
 		   
 	}, []);
+    
     const validateMail = (mail:string) => {
         let regu = /^\w+((.\w+)|(-\w+))@[A-Za-z0-9]+((.|-)[A-Za-z0-9]+).[A-Za-z0-9]+$/;
         let reg = new RegExp(regu);
@@ -93,8 +158,8 @@ export const Login = () => {
         keyword: "blog, fe, 前端开发, 技术博客",
         descript: "我的网站首页--职业前端从业者的故事"
     });
-    const [mailStatus, setMailStatus] = useState(false)
-    const [passwdStatus, setPasswdStatus] = useState(false)
+    const [mailStatus, setMailStatus] = useState(true)
+    const [passwdStatus, setPasswdStatus] = useState(true)
     const [formValues, setFormValues] = useState({
 		email: "",
 		password: "",
@@ -116,6 +181,7 @@ export const Login = () => {
             required
             fullWidth
             type="email"
+            error={!!!mailStatus}
             id="email"
             label="Email Address"
             name="email"
@@ -124,12 +190,15 @@ export const Login = () => {
             onChange={e => handleChange(e)}
         />
     let pwdHTML = 
-        <FormControl variant="outlined">
+        <FormControl variant="outlined" fullWidth>
             <InputLabel htmlFor="outlined-adornment-password">Password</InputLabel>
             <OutlinedInput
                 id="outlined-adornment-password"
+                fullWidth
+                required
                 type={formValues.showPassword ? 'text' : 'password'}
                 value={formValues.password}
+                error={!!!passwdStatus}
                 name="password"
                 onChange={e => handleChange(e)}
                 endAdornment={
@@ -151,64 +220,10 @@ export const Login = () => {
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
+        console.log("form:", validateMail(formValues['email']));
+        console.log("form:", validatePwd(formValues['password']));
         setMailStatus(validateMail(formValues['email']))
         setPasswdStatus(validatePwd(formValues['password']))
-        mailHTML = mailStatus === false ? 
-            <TextField
-                variant="outlined"
-                margin="normal"
-                required
-                fullWidth
-                type="email"
-                id="email"
-                label="Email Address"
-                name="email"
-                autoComplete="email"
-                autoFocus
-                onChange={e => handleChange(e)}
-            /> : 
-            <TextField
-                variant="outlined"
-                margin="normal"
-                error
-                required
-                fullWidth
-                type="email"
-                id="email"
-                label="Email Address"
-                name="email"
-                autoComplete="email"
-                helperText="email格式错误."
-                autoFocus
-                onChange={e => handleChange(e)}
-            />
-        pwdHTML = passwdStatus === false ? 
-            <TextField
-                variant="outlined"
-                margin="normal"
-                required
-                fullWidth
-                name="password"
-                label="Password"
-                type="password"
-                id="password"
-                autoComplete="current-password"
-                onChange={e => handleChange(e)}
-            /> : 
-            <TextField
-                variant="outlined"
-                margin="normal"
-                required
-                fullWidth
-                error
-                helperText="密码在6~16位之间."
-                name="password"
-                label="Password"
-                type="password"
-                id="password"
-                autoComplete="current-password"
-                onChange={e => handleChange(e)}
-            />
         // console.log("form:", form.current);
         // defaultValue="Error" error
 		// form.current
@@ -219,6 +234,12 @@ export const Login = () => {
 		let value:string;
 		if (key !== "remember") {
 			value = e.currentTarget.value;
+            if(key === "email") {
+                setMailStatus(true);
+            }
+            if(key === "password") {
+                setPasswdStatus(true);
+            }
 		} else {
 			value = e.currentTarget.checked.toString();
 		}
@@ -251,7 +272,7 @@ export const Login = () => {
                                     onChange={e => handleChange(e)}
                                 />
                             }
-                            label="Remember me"
+                            label="记住我"
                         />
                         <Button type="submit" fullWidth variant="contained" color="primary" className={classes.submit}>
                             登录
@@ -263,7 +284,7 @@ export const Login = () => {
                                 </Link>
                             </Grid>
                             <Grid item>
-                                <Link href="/" variant="body2">
+                                <Link href="/register" variant="body2">
                                     {"我还没有账号"}
                                 </Link>
                             </Grid>
