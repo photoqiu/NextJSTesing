@@ -304,4 +304,14 @@ export const Register = () => {
     )
 }
 
+///生命周期之前，加载数据使用
+Register.getInitialProps = async function() {
+    const res = await fetch('http://api.tvmaze.com/search/shows?q=batman')
+    const data = await res.json()
+    console.log(`Show data fetched. Count: ${data.length}`)
+    return {
+      shows: data
+    }
+}
+
 export default Register;

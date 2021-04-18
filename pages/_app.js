@@ -7,6 +7,7 @@ import {
     ThemeProvider as MaterialThemeProvider,
     createMuiTheme
 } from '@material-ui/core/styles';
+import cookies from 'next-cookies';
 
 const theme = {
     primary: '#f2f2f2',
@@ -14,6 +15,19 @@ const theme = {
 }
 
 export default class App extends NextApp {
+
+    static async getInitialProps(ctx) {
+        return {
+            initialName: cookies(ctx).name || ''
+        }
+    }
+
+    constructor(props) {
+        super(props);
+        this.state = {name: props.initialName || ''};
+        console.log("name:",  this.state)
+    }
+
     componentDidMount() {
         const jssStyles = document.querySelector('#jss-server-side')
         if (jssStyles && jssStyles.parentNode)
