@@ -8,7 +8,8 @@
  */
 const API = {
     constants: {
-        login: "http://weapi.jd.com/api/user/login"
+        login: "http://weapi.jd.com/api/user/login",
+        registerUser: "http://weapi.jd.com/api/user/registers"
     }
     
 };

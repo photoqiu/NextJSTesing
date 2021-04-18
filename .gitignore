@@ -6,6 +6,7 @@ npm-debug.log*
 # vscode
 jsconfig.json
 dist
+package-*.js*
 
 # Runtime data
 pids

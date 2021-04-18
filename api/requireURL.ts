@@ -7,6 +7,7 @@ import "whatwg-fetch";
  */
 enum ContentType {
     json = 'application/json;charset=UTF-8',
+    uploader = 'multipart/form-data',
     form = 'application/x-www-form-urlencoded; charset=UTF-8'
 }
 /**
@@ -25,7 +26,7 @@ enum HttpMethod {
  */
 interface IHeader {
     Accept?: string;
-    'Content-Type': string;
+    "Content-Type": string;
     [propName: string]: any;
 }
 /**
@@ -37,15 +38,16 @@ interface IReqConfig {
     method?: string;
     credentials?: string;
     headers?: IHeader;
-    body?:any;
+    body?: any;
 }
 interface IHttp {
     getFetch<R,P={}>(url: string, params?:P, options?:RequestInit): Promise<R>;
-    // getFetchJsonp<R,P>(url: string, params?:P, options?:RequestInit): Promise<R>;
-    postFetch<R,P={}>(url: string, params?:P): Promise<R>;
+    doPostDatas<R,P={}>(url: string, params?:P): Promise<R>;
+    doPostRawDatas<R,P={}>(url: string, params:P): Promise<R>;
 }
 
 export default class HttpRequests implements IHttp {
+    
     public handleUrl = (url: string) => (params:any):string => {
         if(params) {
             let paramsArray:any = [];
@@ -66,7 +68,7 @@ export default class HttpRequests implements IHttp {
             method: HttpMethod.get,
             credentials: 'include',
             headers: {
-                'Content-Type': ContentType.json
+                "Content-Type": ContentType.json
             } 
         }
         return await fetch(this.handleUrl(url)(params), options)
@@ -90,16 +92,50 @@ export default class HttpRequests implements IHttp {
                 return error;
             });
     }
-    public async postFetch<R, P={}>(url: string, params?: P):Promise<R> {
-        let formData = new FormData();
-        Object.keys(params).forEach((key) => formData.append(key, params[key]));
+    public async doPostDatas<R, P={}>(url: string, params?: P):Promise<R> {
         let options: RequestInit = {
-            method: HttpMethod.get,
-            credentials: 'include',
+            method: HttpMethod.post,
+            credentials: 'same-origin',
             headers: {
-                'Content-Type': ContentType.json
+                "Content-Type": ContentType.json,
+                "Cache-Control": "no-cache",
+                "accept-encoding": "gzip, deflate",
+                "Connection": "keep-alive",
+                "cache-control": "no-cache"
             },
-            body: formData
+            body: JSON.stringify(params)
+        }
+        return await fetch(url, options)
+            .then<R>((response:any) => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    console.error("服务器繁忙，请稍后再试；\r\nCode:" + response.status);
+                }
+            })
+            .then<R>((response:any) => {
+                // response.code：是与服务器端约定code：200表示请求成功，非200表示请求失败，message：请求失败内容
+                return response;
+            })
+            .catch<R>((error) => {
+                console.error("当前网络不可用，请检查网络设置！");
+                return error;
+            });
+    }
+    public async doPostRawDatas<R, P={}>(url: string, params: P):Promise<R> {
+        let formdata = new FormData();
+        Object.keys(params).forEach((key) => formdata.append(key, params[key]));
+        let options: RequestInit = {
+            method: HttpMethod.post,
+            credentials: 'same-origin',
+            headers: {
+                "Content-Type": ContentType.form,
+                "Cache-Control": "no-cache",
+                "accept-encoding": "gzip, deflate",
+                "Connection": "keep-alive",
+                "cache-control": "no-cache"
+            },
+            body: formdata
         }
         return await fetch(url, options)
             .then<R>((response:any) => {

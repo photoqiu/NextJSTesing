@@ -6,7 +6,7 @@
  * @FilePath: \NextJSTesing\pages\register.tsx
  * @version: 
  */
-import React, { useRef, forwardRef, useState } from "react";
+import React, { useRef, forwardRef, useState, useEffect } from "react";
 import Header from "../compones/Header/index";
 import CopyRight from "../compones/Footer/index";
 import Avatar from "@material-ui/core/Avatar";
@@ -29,18 +29,8 @@ import Typography from "@material-ui/core/Typography";
 import { Theme, makeStyles, createStyles } from "@material-ui/core/styles";
 import IconButton from '@material-ui/core/IconButton';
 import Container from "@material-ui/core/Container";
-import HttpReq from '../api/requireURL';
+import {getFetch, postFetch, formFetch} from '../api/ajax';
 import API from '../api/config';
-
-const Http = new HttpReq();
-
-export async function getFetch(url:string, params:any) {
-    return Http.getFetch(url, params);
-}
-
-export async function postFetch(url:string, params:any) {
-    return Http.postFetch(url, params);
-}
 
 const useStyles = makeStyles((theme: Theme) => 
     createStyles({
@@ -86,7 +76,6 @@ export const Register = () => {
     const validateMail = (mail:string) => {
         let regu = /^\w+((.\w+)|(-\w+))@[A-Za-z0-9]+((.|-)[A-Za-z0-9]+).[A-Za-z0-9]+$/;
         let reg = new RegExp(regu);
-        console.log("mail:", mail)
         if(mail === "") { //输入不能为空
             return false;
         } else if(!!!reg.test(mail)) { //正则验证不通过，格式不对
@@ -96,16 +85,23 @@ export const Register = () => {
         }
     }
     const validateName = (name:string) => {
-        let regu = /^[a-zA-Z0-9_\u4e00-\u9fa5]+$/;
-        let reg = new RegExp(regu);
-        if(name.length < 2 && name.length > 8) { //输入不能为空
+        let regname0 = new RegExp(/^[a-zA-Z_\u4e00-\u9fa5]+$/);
+        // let regname1 = new RegExp(/^[`~!@#$^&*()=|{}':;',\\[\\].<>\/?~！@#￥……&*（）——|{}【】‘；：”“'。，、？]+$/);
+        // let regname2 = new RegExp(/^[0-9]+$/);
+        if(name.length < 2 && name.length > 16) { //输入不能为空zhang, zhang, zhang
             return false;
-        } else if(!!!reg.test(name)) { //正则验证不通过，格式不对
+        } else if(!!!regname0.test(name)) { //正则验证不通过，格式不对
             return false;
         } else {
             return true;
         }
     }
+
+    useEffect(() => {
+        // const fetchData = formFetch(API.constants.registerUser, formValues);
+        // console.info("fetchData：", fetchData);
+	}, []);
+
     const validatePhone = (phone:string) => {
         let regu = /^(13[0-9]|14[01456879]|15[0-35-9]|16[2567]|17[0-8]|18[0-9]|19[0-35-9])\d{8}$/;
         let reg = new RegExp(regu);
@@ -146,7 +142,7 @@ export const Register = () => {
         setPasswdStatus(isPasswd);
         setPhoneStatus(isPhone);
         if (isPhone && isPasswd && isEmail && isNickName && isName) {
-            /////这里调用异步提交请求。
+            formFetch(API.constants.registerUser, formValues);
         }
         return false;
         //////////////////////////////////////////设置状态是异步的。所以，还是要一个判断
