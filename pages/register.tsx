@@ -1,7 +1,7 @@
 /*
  * @Author: ext.qiubo
  * @Date: 2021-04-16 15:55:56
- * @LastEditTime: 2021-04-16 20:05:34
+ * @LastEditTime: 2021-04-19 16:52:25
  * @LastEditors: ext.qiubo
  * @FilePath: \NextJSTesing\pages\register.tsx
  * @version: 
@@ -142,7 +142,8 @@ export const Register = () => {
         setPasswdStatus(isPasswd);
         setPhoneStatus(isPhone);
         if (isPhone && isPasswd && isEmail && isNickName && isName) {
-            formFetch(API.constants.registerUser, formValues);
+            // formFetch(API.constants.registerUser, formValues);
+            postFetch(API.constants.registerUser, formValues);
         }
         return false;
         //////////////////////////////////////////设置状态是异步的。所以，还是要一个判断
@@ -304,14 +305,14 @@ export const Register = () => {
     )
 }
 
-///生命周期之前，加载数据使用
+///生命周期之前，加载数据使用，这里用于修改个人信息使用。
 Register.getInitialProps = async function() {
-    const res = await fetch('http://api.tvmaze.com/search/shows?q=batman')
-    const data = await res.json()
-    console.log(`Show data fetched. Count: ${data.length}`)
-    return {
-      shows: data
-    }
+    // const res = await fetch('http://api.tvmaze.com/search/shows?q=batman')
+    // const data = await res.json()
+    // console.log(`Show data fetched. Count: ${data.length}`)
+    // return {
+    //   shows: data
+    // }
 }
 
 export default Register;
