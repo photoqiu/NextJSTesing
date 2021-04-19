@@ -9,7 +9,7 @@
 const MongoClient = require('mongodb').MongoClient;
 
 // async function run() {
-//     const url = 'mongodb://127.0.0.1:27017/';
+//     const url = 'mongodb://192.168.31.109:27017/';
 //     const dbName = 'jdfe';
 //     const client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: true });
 //     try {
@@ -23,43 +23,38 @@ const MongoClient = require('mongodb').MongoClient;
 // run().catch(console.dir);
 
 async function findUsers(users) {
-    const url = 'mongodb://127.0.0.1:27017/';
+    const url = 'mongodb://192.168.31.109:27017/';
     const dbName = 'jdfe';
     const client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: true });
     try {
         await client.connect();
         const collection = await client.db(dbName).collection("users");
-        const cursor = await collection.findOne(users);
-        if (!!!cursor) {
+        const cursor = collection.find({name:users.name});
+        const findResult = await cursor.toArray();
+        if (findResult.length === 0) {
             return true;
         }
-        const numbers = await cursor.count()
-        if (numbers === 0) {
-            return true;
-        }
-        await cursor.forEach(console.dir)
         return false;
     } finally {
         await client.close();
     }
 }
 
-let isUsers = findUsers({name:"邱博", nickName:"photoqiu", email:"ext.qiubo@jd.com"}).catch(console.dir);
-isUsers.then((value) => console.log(value))
-
 async function addUsers(users) {
-    const url = 'mongodb://127.0.0.1:27017/';
+    const url = 'mongodb://192.168.31.109:27017/';
     const dbName = 'jdfe';
     const client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: true });
     try {
         await client.connect();
         const collection = await client.db(dbName).collection("users");
-        const cursor = await collection.findOne(users);
-        if (!!!cursor) {
+        const cursor = collection.find({name:users.name});
+        const findResult = await cursor.toArray();
+        if (findResult.length === 0) {
             const result = await collection.insertOne(users);
             return result.insertedId;
+        } else {
+            return -1;
         }
-        return -1;
     } finally {
         await client.close();
     }
@@ -90,6 +85,18 @@ async function findAndUpdateUsers(users, newUserDatas) {
           }
         },
     );
+}
+
+function syncAddUsers (users) {
+    let status = addUsers(users).catch(console.dir);
+    return new Promise((resolve) => {
+
+    })
+    
+    
+    status.then((statu) => {
+        return statu;
+    })
 }
 
 module.exports = {findAndUpdateUsers, updateUsers, addUsers, findUsers};

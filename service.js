@@ -2,9 +2,9 @@
 const Koa = require('koa')
 const next = require('next')
 const router = require('koa-router')()
-const fs = require("fs")
 const bodyParser = require("koa-bodyparser")
 const cors = require('koa2-cors')
+const logger = require('koa-logger')
 const {addUsers, updateUsers, findUsers} = require('./serviceSider/dblib/mongodb');
 const dev = process.env.NODE_ENV !== 'production'
 const app = next({ dev })
@@ -28,28 +28,19 @@ app.prepare().then(() => {
     const server = new Koa()
     server.use(bodyParser())
     server.use(cors(options))
+    server.use(logger())
     router.post("/api/users/save", async (ctx, next) => {
         let [name, nickName, email, password, phone, marketing] = [
             ctx.request.body.name, ctx.request.body.nickName, ctx.request.body.email, ctx.request.body.password, ctx.request.body.phone, ctx.request.body.marketing
         ];
-        let isNews = findUsers({ name: name, nickName:nickName, email:email, phone:phone }).catch(console.dir);
-        isNews.then((value) =>  {
-            if (value) {
-                let isSucess = addUsers(ctx.request.body).catch(console.dir);
-                let _self = this
-                isSucess.then((values)=> {
-                    if (!!values) {
-                        _self.ctx.response.body = { status:200, msg:'成功.', data: _self.ctx.request.body }
-                    } else {    
-                        _self.ctx.response.body = { status:-2, msg:'注册失败，请重试。', data: _self.ctx.request.body }
-                    }
-                })
-            } else {
-                ctx.response.body = { status:-1, msg:'不能重复注册。', data: ctx.request.body }
-            }
-        })
-        console.log("markings:", name, nickName, email, password, phone, marketing);
-        
+        let jsons = {}
+        const isSucess = await addUsers({name:name, nickName:nickName, email:email, password:password, phone:phone, marketing:marketing}).catch(console.dir);
+        if (isSucess >= 0) {
+            jsons = {code:200, msg:"注册成功", data: ctx.request.body}
+        } else {
+            jsons = {code:isSucess, msg:"注册失败", data: ctx.request.body}
+        }
+        ctx.response.body = jsons
     })
     router.post("/api/users/update", async (ctx, next) => {
         console.log("ctx :", ctx.query)
@@ -59,14 +50,9 @@ app.prepare().then(() => {
     })
     server.use(router.routes()).use(router.allowedMethods())///注册路由
     server.use(async (ctx, next) => {
-        console.log("ctx.url:", ctx.url)
-        if (ctx.url.indexOf("api") >= 0) {
-            await next()
-        } else {
-            ctx.acceptsEncodings(PageZipConfig);
-            await handle(ctx.req, ctx.res)
-            ctx.respond = false
-        }
+        ctx.acceptsEncodings(PageZipConfig);
+        await handle(ctx.req, ctx.res)
+        ctx.respond = false
     })
     server.on('error', (err, ctx) => {
         console.error('server error', err, ctx)
