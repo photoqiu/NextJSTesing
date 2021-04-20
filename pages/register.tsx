@@ -29,8 +29,15 @@ import Typography from "@material-ui/core/Typography";
 import { Theme, makeStyles, createStyles } from "@material-ui/core/styles";
 import IconButton from '@material-ui/core/IconButton';
 import Container from "@material-ui/core/Container";
-import {getFetch, postFetch, formFetch} from '../api/ajax';
+import Snackbar from '@material-ui/core/Snackbar';
+import MuiAlert, { AlertProps } from '@material-ui/lab/Alert';
+import { useCookie } from 'next-cookie'
+import { postFetch } from '../api/ajax';
 import API from '../api/config';
+
+function Alert(props: AlertProps) {
+    return <MuiAlert elevation={6} variant="filled" {...props} />;
+}
 
 const useStyles = makeStyles((theme: Theme) => 
     createStyles({
@@ -54,7 +61,23 @@ const useStyles = makeStyles((theme: Theme) =>
     })
 );
 
-export const Register = () => {
+interface userDetails {
+    code:number;
+    msg:string;
+    data:details;
+}
+
+interface details {
+    name:string;
+    nickName:string;
+    password:string;
+    showPassword:boolean;
+    marketing:boolean;
+    phone:string;
+    email:string;
+}
+
+export const Register = (props:any) => {
     const form:any = useRef(null);
     const classes = useStyles();
     const [mailStatus, setMailStatus] = useState(true)
@@ -62,6 +85,10 @@ export const Register = () => {
     const [nameStatus, setNameStatus] = useState(true)
     const [nickNameStatus, setNickNameStatus] = useState(true)
     const [phoneStatus, setPhoneStatus] = useState(true)
+    const [open, setOpen] = useState(false)
+    const [openStyle, setOpenStyle] = useState("error")
+    const [openMessage, setOpenMessage] = useState("")
+    const cookie = useCookie(props.cookie)
     /////////////////////////////////////////////////////////////////////
     const [formValues, setFormValues] = useState({
 		name: "",
@@ -84,6 +111,7 @@ export const Register = () => {
             return true;
         }
     }
+
     const validateName = (name:string) => {
         let regname0 = new RegExp(/^[a-zA-Z_\u4e00-\u9fa5]+$/);
         // let regname1 = new RegExp(/^[`~!@#$^&*()=|{}':;',\\[\\].<>\/?~！@#￥……&*（）——|{}【】‘；：”“'。，、？]+$/);
@@ -129,13 +157,20 @@ export const Register = () => {
         descript: "我的网站首页--职业前端从业者的故事"
     });
 
+    const handleClose = (event?: React.SyntheticEvent, reason?: string) => {
+        if (reason === 'clickaway') {
+          return;
+        }
+        setOpen(false);
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
-        let isName = validateName(formValues['name'])
-        let isNickName = validateName(formValues['nickName'])
-        let isEmail = validateMail(formValues['email'])
-        let isPasswd = validatePwd(formValues['password'])
-        let isPhone = validatePhone(formValues['phone'])
+        let isName:boolean = validateName(formValues['name'])
+        let isNickName:boolean = validateName(formValues['nickName'])
+        let isEmail:boolean = validateMail(formValues['email'])
+        let isPasswd:boolean = validatePwd(formValues['password'])
+        let isPhone:boolean = validatePhone(formValues['phone'])
 		setNameStatus(isName);
         setNickNameStatus(isNickName);
         setMailStatus(isEmail);
@@ -143,7 +178,30 @@ export const Register = () => {
         setPhoneStatus(isPhone);
         if (isPhone && isPasswd && isEmail && isNickName && isName) {
             // formFetch(API.constants.registerUser, formValues);
-            postFetch(API.constants.registerUser, formValues);
+            let promiseDatas = postFetch(API.constants.registerUser, formValues)
+            promiseDatas.then((data:userDetails) => {
+                if (data.code !== 200) {
+                    setOpen(true);
+                    setOpenStyle("error");
+                    setOpenMessage(data.msg);
+                    console.log(cookie);
+                    cookie.set('myfeCookies', JSON.stringify(data.data));
+                } else {
+                    setOpen(true);
+                    setOpenStyle("success");
+                    setOpenMessage(data.msg);
+                    // Get a cookie
+                    // cookies.get('myfeCookies');
+                    // Set a cookie
+                    cookie.set('myfeCookies', JSON.stringify(data.data), {
+                        httpOnly: true // true by default
+                    });
+                    // Delete a cookie
+                    // cookies.set('myCookieName')
+                }
+                console.log("0 datas:", data);
+            })
+            console.log("1 datas:", promiseDatas);
         }
         return false;
         //////////////////////////////////////////设置状态是异步的。所以，还是要一个判断
@@ -287,7 +345,11 @@ export const Register = () => {
 					<Button type="submit" fullWidth variant="contained" color="primary" className={classes.submit}>
 						注册
 					</Button>
-
+                    <Snackbar open={open} autoHideDuration={6000} onClose={handleClose}>
+                        <Alert onClose={handleClose} severity={openStyle}>
+                            {openMessage}
+                        </Alert>
+                    </Snackbar>
 					<Grid container justify="flex-end">
 						<Grid item>
 							<Link href="/login" variant="body2">
@@ -306,13 +368,20 @@ export const Register = () => {
 }
 
 ///生命周期之前，加载数据使用，这里用于修改个人信息使用。
-Register.getInitialProps = async function() {
-    // const res = await fetch('http://api.tvmaze.com/search/shows?q=batman')
-    // const data = await res.json()
-    // console.log(`Show data fetched. Count: ${data.length}`)
-    // return {
-    //   shows: data
-    // }
-}
-
+// Register.getInitialProps = async function() {
+//     // const res = await fetch('http://api.tvmaze.com/search/shows?q=batman')
+//     // const data = await res.json()
+//     // console.log(`Show data fetched. Count: ${data.length}`)
+//     // return {
+//     //   shows: data
+//     // }
+// }
+export function getServerSideProps(context) {
+    const cookie = useCookie(context)
+    return {
+        props: {
+            cookie: context.req.headers.cookie || ''
+        }
+    }
+  }
 export default Register;

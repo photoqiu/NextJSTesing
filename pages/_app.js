@@ -7,19 +7,22 @@ import {
     ThemeProvider as MaterialThemeProvider,
     createMuiTheme
 } from '@material-ui/core/styles';
-import cookies from 'next-cookies';
+import { Cookie, withCookie } from 'next-cookie'
 
 const theme = {
     primary: '#f2f2f2',
     ...createMuiTheme()
 }
-
-export default class App extends NextApp {
+class App extends NextApp {
 
     static async getInitialProps(ctx) {
-        return {
-            initialName: cookies(ctx).name || ''
+        const name = ctx.cookie.get('myfeCookies')
+        console.log("cookie:", ctx.cookie)
+        let initialName = "";
+        if (!!name) {
+            initialName = name
         }
+        return { initialName }
     }
 
     constructor(props) {
@@ -54,3 +57,5 @@ export default class App extends NextApp {
         )
     }
 }
+
+export default withCookie(App)
