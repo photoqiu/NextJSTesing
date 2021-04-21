@@ -13,6 +13,7 @@ const theme = {
     primary: '#f2f2f2',
     ...createMuiTheme()
 }
+
 class App extends NextApp {
 
     static async getInitialProps(ctx) {
@@ -27,8 +28,9 @@ class App extends NextApp {
 
     constructor(props) {
         super(props);
-        this.state = {name: props.initialName || ''};
-        console.log("name:",  this.state)
+        const { pageProps, initialName } = props
+        this.state = {name: pageProps.cookie.get('myfeCookies') || ''};
+        console.log("name:",  this.state, props)
     }
 
     componentDidMount() {

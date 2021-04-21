@@ -89,6 +89,7 @@ export const Register = (props:any) => {
     const [openStyle, setOpenStyle] = useState("error")
     const [openMessage, setOpenMessage] = useState("")
     const cookie = useCookie(props.cookie)
+    
     /////////////////////////////////////////////////////////////////////
     const [formValues, setFormValues] = useState({
 		name: "",

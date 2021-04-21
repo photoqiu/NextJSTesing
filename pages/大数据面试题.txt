@@ -1,0 +1,395 @@
+事实表有哪几种类型？
+答案：
+[事实表]数据仓库事实表分类
+1）在数据仓库领域有一个概念叫Transaction fact table，中文一般翻译为“事务事实表”。
+事务事实表是维度建模的数据仓库中三种基本类型事实表中的一种，另外两种分别是周期快照事实表和累积快照事实表。
+事务事实表与周期快照事实表、累积快照事实表使用相同的一致性维度，但是它们在描述业务事实方面是有着非常大的差异的。
+事务事实表记录的事务层面的事实，保存的是最原子的数据，也称“原子事实表”。事务事实表中的数据在事务事件发生后产生，数据的粒度通常是每个事务一条记录。一旦事务被提交，事实表数据被插入，数据就不再进行更改，其更新方式为增量更新。
+事务事实表的日期维度记录的是事务发生的日期，它记录的事实是事务活动的内容。用户可以通过事务事实表对事务行为进行特别详细的分析。
+通过事务事实表，还可以建立聚集事实表，为用户提供高性能的分析。
+
+2）在数据仓库领域有一个概念叫Periodicsnapshot fact table，中文一般翻译为“周期快照事实表”。
+周期快照事实表以具有规律性的、可预见的时间间隔来记录事实，时间间隔如每天、每月、每年等等。典型的例子如销售日快照表、库存日快照表等。
+周期快照事实表的粒度是每个时间段一条记录，通常比事务事实表的粒度要粗，是在事务事实表之上建立的聚集表。周期快照事实表的维度个数比事务事实表要少，但是记录的事实要比事务事实表多。
+周期快照事实表的日期维度通常是记录时间段的终止日，记录的事实是这个时间段内一些聚集事实值。事实表的数据一旦插入即不能更改，其更新方式为增量更新。
+
+3）在数据仓库领域有一个概念叫Accumulatingsnapshot fact table，中文一般翻译为“累积快照事实表”。
+累积快照事实表和周期快照事实表有些相似之处，它们存储的都是事务数据的快照信息。但是它们之间也有着很大的不同，周期快照事实表记录的确定的周期的数据，而累积快照事实表记录的不确定的周期的数据。
+累积快照事实表代表的是完全覆盖一个事务或产品的生命周期的时间跨度，它通常具有多个日期字段，用来记录整个生命周期中的关键时间点。另外，它还会有一个用于指示最后更新日期的附加日期字段。由于事实表中许多日期在首次加载时是不知道的，所以必须使用代理关键字来处理未定义的日期，而且这类事实表在数据加载完后，是可以对它进行更新的，来补充随后知道的日期信息。
+举例来说，
+
+订货日期
+预定交货日期
+实际发货日期
+实际交货日期
+数量
+金额
+运费
+
+区别比较：
+
+根据Kimball的数据仓库理论，事实表分为三种类型：交易事实表、周期快照事实表和累积快照事实表。以下是这几种事实表之间的区别。
+特点
+交易事实
+周期快照事实
+累积快照事实
+时间/时期
+时间
+时期
+时间跨度较短的多个时点
+粒度
+每行代表一个交易事件
+每行代表一个时间周期
+每行代表一个业务周期
+事实表加载
+新增
+新增
+新增和修改
+事实表更新
+不更新
+不更新
+新事件产生时更新
+时间维
+业务日期
+时期末
+多个业务过程的完成日期
+事实
+交易活动
+时间周期内的绩效
+限定多个业务阶段内的绩效
+
+2.问题：快递业务的拉链表的使用场景？
+
+拉链表的使用场景
+在数据仓库的数据模型设计过程中，经常会遇到下面这种表的设计：
+
+有一些表的数据量很大，比如一张用户表，大约10亿条记录，50个字段，这种表，即使使用ORC压缩，单张表的存储也会超过100G，在HDFS使用双备份或者三备份的话就更大一些。
+表中的部分字段会被update更新操作，如用户联系方式，产品的描述信息，订单的状态等等。
+需要查看某一个时间点或者时间段的历史快照信息，比如，查看某一个订单在历史某一个时间点的状态。
+表中的记录变化的比例和频率不是很大，比如，总共有10亿的用户，每天新增和发生变化的有200万左右，变化的比例占的很小。
+那么对于这种表我该如何设计呢？下面有几种方案可选：
+
+方案一：每天只留最新的一份，比如我们每天用Sqoop抽取最新的一份全量数据到Hive中。
+方案二：每天保留一份全量的切片数据。
+方案三：使用拉链表。
+为什么使用拉链表
+现在我们对前面提到的三种进行逐个的分析。
+
+方案一
+这种方案就不用多说了，实现起来很简单，每天drop掉前一天的数据，重新抽一份最新的。
+优点很明显，节省空间，一些普通的使用也很方便，不用在选择表的时候加一个时间分区什么的。
+缺点同样明显，没有历史数据，先翻翻旧账只能通过其它方式，比如从流水表里面抽。
+
+方案二
+每天一份全量的切片是一种比较稳妥的方案，而且历史数据也在。
+缺点就是存储空间占用量太大太大了，如果对这边表每天都保留一份全量，那么每次全量中会保存很多不变的信息，对存储是极大的浪费，这点我感触还是很深的......
+当然我们也可以做一些取舍，比如只保留近一个月的数据？但是，需求是无耻的，数据的生命周期不是我们能完全左右的。
+
+拉链表
+拉链表在使用上基本兼顾了我们的需求。
+首先它在空间上做了一个取舍，虽说不像方案一那样占用量那么小，但是它每日的增量可能只有方案二的千分之一甚至是万分之一。
+其实它能满足方案二所能满足的需求，既能获取最新的数据，也能添加筛选条件也获取历史的数据。
+所以我们还是很有必要来使用拉链表的。
+
+3. 你们的数仓是怎么样的架构？
+技术架构方面：
+可以从数据采集到数据进入数仓后的etl，再到数据怎么做成数据服务提供给业务方，整个流程的核心技术节点划一遍。
+然后，再重点讲一下自己做的模块（做数据治理 or 数据开发 or...),比如说数据开发，就可以讲讲，实际工作中遇到过哪些难点，做过哪些优化，突出自己技术亮点（数开更多的是sql优化，sql优化真的有太多可讲的）。
+
+数据流转：
+这块主要讲自己所在公司的数据是从哪里来，进仓库前会做什么处理，重点监控哪些（比如：数据完整性监控）-->进仓库后会做哪些处理，做哪些监控（比如数据准确性，指标一致性）-->出仓库，数据又会提供给哪些业务方，怎么保障数据的准确性和及时性等等。
+讲一下这个过程中自己有哪些比较好的想法，对整个过程起了什么样的积极作用。
+
+分层建模：
+这块主要讲公司目前仓库的分层，每一层的作用，有哪些基础数据，讲一下自己对目前公司仓库设计的一些看法，好的地方，不好的地方。不好的地方，需要怎么改进。
+现在的仓库怎么通过建模来收敛口径，减少代码重复开发，要有实际例子。
+讲自己曾经做过的建模上的优化，比如：通过一些数据血缘的技巧筛选出 仓库中 有相似的中间模型表，经过考察，这些表的口径只是有微小不同，最后自己主动和业务方沟通，大家达成一致，重新设计一张模型或者都归一到现存的其中一个模型上。这也属于模型优化的一个案例，为仓库减少了多少存储资源，计算资源。
+另外还可以讲一讲，自己的一些设计比较巧妙的模型，比如留存，留存的设计可以依据业务需求，从易到难，有多种设计。
+也可以讲讲自己建模时，会考虑哪些点：实现的复杂程度，模型的运行时长，占用资源的大小，模型的生命周期....等等
+维度建模，星型模型，这么多年了，都是这些，也没什么创新，如果只讲这些，会让人觉得耳朵都起茧子了，可以把这些融合到实际案例中，多讲自己的思考和感悟，平时工作中也要细心观察，现在没有任何一家公司的数据仓库是完美的，只要你肯用心发现，都能找到优化的点。然后自己尝试去做一做，该推动的事情，自己主动去推一推
+当然这里还有很多很多其它的东西，有一些，看上去很没技术含量，但是让你去做，还真不一定能做好。
+
+2、数据怎么抽象？
+抽象的前提就是了解业务，知道业务想要什么，把业务方提的零碎的需求，分门归类，总结成业务主题和数据主题。
+比如：用户业务主题下，可划分为回流，留存，日活，新增，全量，行为标签...
+实现部分，落地模型，也是从需求出发，把业务方的需求细化到指标和维度。
+比如：业务方说我想看一下某个渠道的用户表现，那你就会考虑，用户表现体现在指标上有哪些：阅读pv，点击次数，停留时长等等。
+有了指标和维度，就能够建模了。这也算是抽象数据的一种思路，工作中，基本都是这样做的。
+
+数仓分层：ods、dwd、dwb、ads（app）。细问的话会有很多衍生问题：
+
+问题：ods你们是怎么实现的？
+答案：
+一、ODS是什么
+ODS是什么？我根据自己的理解，ODS是一个将面向主题的，动态增长的，非实时的，消除了原始数据库差异的，对原始库最大限度进行冗余处理后得到的数据集，通过ODS消除了数据间的关联细节，实现了对某一领域数据进行统一处理（比如查询、统计）的快捷方法。
+ODS的核心是对业务粒度进行划分，进而设计出合理的ODS表。
+ODS数据的来源一般是从原有数据库中通过一定的方法抽取的，抽取的方法可以是程序实现，也可以通过存储过程来实现。
+ODS对数据的抽取是可以是多维度的。从原始数据库抽取到基本的ODS表是一级抽取，从一级ODS表向更高维度的ODS表抽取数据是二级抽取，以此类推。
+进行多少级的抽取是根据业务的需求来确定的。比如要做一个某一主题的万能查询，通过原始库表之间的关联几乎是无法实现的。但是通过对原始库该主题的表数据进行冗余处理形成新的ODS数据表可以方便实现。但是要是对这些数据库进行处理以生成月报表、年报表，则需要多级抽取，比如对ODS表进行分月统计后，将结果保存在新的ODS表中，在这个新的月报ODS表中，再进行年一级别的统计处理，就形成了年报ODS表。往往ODS表中的列数非常的多，远远超出某一业务的需要。
+ 
+二、ODS实现
+1、划分主题（业务域），结合需求，对本业务域中的表进行分析冗余形成一个或多个大表--ODS表。
+2、结合需求，对ODS数据抽取的粒度进行分析，这里面也许会做多级数据抽取。
+3、通过具体的实现方法，给ODS表中抽取数据，抽取过程一般在停止业务或者服务器空闲的情况下进行，比如每天晚上抽取当天数据到ODS中。
+4、对数据进行管理，数据库中的数据分为当前、历史、归档。
+
+问题：dwd这一层做了什么？
+答案：
+1.数据仓库DW
+1.1简介
+Data warehouse（可简写为DW或者DWH）数据仓库，是在数据库已经大量存在的情况下，为了进一步挖掘数据资源、为了决策需要而产生的，它是一整套包括了etl、调度、建模在内的完整的理论体系。数据仓库的方案建设的目的，是为前端查询和分析作为基础，主要应用于OLAP（on-line Analytical Processing），支持复杂的分析操作，侧重决策支持，听且提供直观易懂的查询结果。比较流行的有：AWS Redshift，Greenplum，Hive等。
+1.2主要特点
+面向主题：
+操作型数据库组织面向事务处理任务，而数据仓库中的数据是按照一定的主题域进行组织。
+主题是指用户使用数据仓库进行决策时所关心的重点方面，一个主题通过与多个操作型信息系统相关。
+集成
+需要对源数据进行加工与融合，统一与综合
+在加工的过程中必须消除源数据的不一致性，以保证数据仓库内的信息时关于整个企业的一致的全局信息。（关联关系）
+不可修改
+DW中的数据并不是最新的，而是来源于其他数据源
+数据仓库主要是为决策分析提供数据，涉及的操作主要是数据的查询
+与时间相关
+处于决策的需要数据仓库中的数据都需要标明时间属性
+1.3与数据库的对比
+DW：专门为数据分析设计的，涉及读取大量数据以了解数据之间的关系和趋势
+数据库：用于捕获和存储数据
+特性	数据仓库	事务数据库
+适合的工作负载	分析、报告、大数据	事务处理
+数据源	从多个来源收集和标准化的数据	从单个来源（例如事务系统）捕获的数据
+数据捕获	批量写入操作通过按照预定的批处理计划执行	针对连续写入操作进行了优化，因为新数据能够最大程度地提高事务吞吐量
+数据标准化	非标准化schema，例如星型Schema或雪花型schema	高度标准化的静态schema
+数据存储	使用列式存储进行了优化，可实现轻松访问和高速查询性能	针对在单行型物理块中执行高吞吐量写入操作进行了优化
+数据访问	为最小化I/O并最大化数据吞吐量进行了优化	大量小型读取操作
+2.数据分层
+数据分层，每个企业根据自己的业务需求可以分成不同的层次，但是最基础的分层思想，理论上数据分为三个层：数据运营层、数据仓库层、数据服务层。基于这个基础分层之上，再提交信息的层次，来满足不同的业务需求。
+
+2.1数据运营层（ODS）
+ODS：Operation Data Store 数据准备区，也称为贴源层。数据仓库源头系统的数据表通常会原封不动的存储一份，这称为ODS层，是后续数据仓库加工数据的来源。
+ODS层数据的来源方式：
+业务库
+经常会使用sqoop来抽取，例如每天定时抽取一次。
+实时方面，可以考虑用canal监听mysql的binlog，实时接入即可。
+埋点日志
+日志一般以文件的形式保存，可以选择用flume定时同步
+可以用spark streaming或者Flink来实时接入
+kafka也OK
+消息队列：即来自ActiveMQ、Kafka的数据等。
+2.2数据仓库层（DW）
+DW数据分层，由下到上为DWD，DWB，DWS。
+------------概念介绍完毕，以下是需要回答的问题----------------------------------------------------------------------------------
+DWD：data warehouse details 细节数据层，是业务层与数据仓库的隔离层。主要对ODS数据层做一些数据清洗和规范化的操作。
+数据清洗：去除空值、脏数据、超过极限范围的
+DWB：data warehouse base 数据基础层，存储的是客观数据，一般用作中间层，可以认为是大量指标的数据层。
+DWS：data warehouse service 数据服务层，基于DWB上的基础数据，整合汇总成分析某一个主题域的服务数据层，一般是宽表。用于提供后续的业务查询，OLAP分析，数据分发等。
+用户行为，轻度聚合
+主要对ODS/DWD层数据做一些轻度的汇总。
+2.3数据服务层/应用层（ADS）
+ADS：applicationData Service应用数据服务，该层主要是提供数据产品和数据分析使用的数据，一般会存储在ES、mysql等系统中供线上系统使用。
+我们通过说的报表数据，或者说那种大宽表，一般就放在这里
+3.附录
+ETL
+ETL ：Extract-Transform-Load，用于描述将数据从来源端经过抽取、转换、加载到目的端的过程。
+宽表
+含义：指字段比较多的数据库表。通常是指业务主体相关的指标、纬度、属性关联在一起的一张数据库表。
+特点：
+宽表由于把不同的内容都放在同一张表，宽表已经不符合三范式的模型设计规范：
+坏处：数据有大量冗余
+好处：查询性能的提高和便捷
+宽表的设计广泛应用于数据挖掘模型训练前的数据准备，通过把相关字段放在同一张表中，可以大大提供数据挖掘模型训练过程中迭代计算的消息问题。
+数据库设计三范式
+为了建立冗余较小、结构合理的数据库，设计数据库时必须遵循一定的规则。在关系型数据库中这种规则就称为范式。范式时符合某一种设计要求的总结。
+第一范式：确保每列保持原子性，即要求数据库表中的所有字段值都是不可分解的原子值。
+第二范式：确保表中的每列都和主键相关。也就是说在一个数据库表中，一个表中只能保存一种数据，不可以把多种数据保存在同一张数据库表中。
+作用：减少了数据库的冗余
+第三范式：确保每列都和主键列直接相关，而不是间接相关。
+
+问题：
+基于 Hive 的文件格式:RCFile解析过吗？文件结构是怎么样的？
+答案：
+RCFile是Hive推出的一种专门面向列的数据格式。 它遵循“先按列划分，再垂直划分”的设计理念。当查询过程中，针对它并不关心的列时，它会在IO上跳过这些列。需要说明的是，RCFile在map阶段从远端拷贝仍然是拷贝整个数据块，并且拷贝到本地目录后RCFile并不是真正直接跳过不需要的列，并跳到需要读取的列， 而是通过扫描每一个row group的头部定义来实现的，但是在整个HDFS Block 级别的头部并没有定义每个列从哪个row group起始到哪个row group结束。所以在读取所有列的情况下，RCFile的性能反而没有SequenceFile高。
+HDFS块内行存储的例子
+HDFS块内列存储的例子
+HDFS块内RCFile方式存储的例子
+
+（1） Av ro
+Avro是一种用于支持数据密集型的二进制文件格式。它的文件格式更为紧凑，若要读取大量数据时，Avro能够提供更好的序列化和反序列化性能。并且Avro数据文件天生是带Schema定义的，所以它不需要开发者在API 级别实现自己的Writable对象。最近多个Hadoop 子项目都支持Avro 数据格式，如Pig 、Hive、Flume、Sqoop和Hcatalog。
+
+（2） 文本格式
+除上面提到的3种二进制格式之外，文本格式的数据也是Hadoop中经常碰到的。如TextFile 、XML和JSON。 文本格式除了会占用更多磁盘资源外，对它的解析开销一般会比二进制格式高几十倍以上，尤其是XML 和JSON，它们的解析开销比Textfile 还要大，因此强烈不建议在生产系统中使用这些格式进行储存。 如果需要输出这些格式，请在客户端做相应的转换操作。 文本格式经常会用于日志收集，数据库导入，Hive默认配置也是使用文本格式，而且常常容易忘了压缩，所以请确保使用了正确的格式。另外文本格式的一个缺点是它不具备类型和模式，比如销售金额、利润这类数值数据或者日期时间类型的数据，如果使用文本格式保存，由于它们本身的字符串类型的长短不一，或者含有负数，导致MR没有办法排序，所以往往需要将它们预处理成含有模式的二进制格式，这又导致了不必要的预处理步骤的开销和储存资源的浪费。
+
+（3） 外部格式
+Hadoop实际上支持任意文件格式，只要能够实现对应的RecordWriter和RecordReader即可。其中数据库格式也是会经常储存在Hadoop中，比如Hbase，Mysql，Cassandra，MongoDB。 这些格式一般是为了避免大量的数据移动和快速装载的需求而用的。他们的序列化和反序列化都是由这些数据库格式的客户端完成，并且文件的储存位置和数据布局(Data Layout)不由Hadoop控制，他们的文件切分也不是按HDFS的块大小（blocksize）进行切割。
+
+2、为什么需要 RCFile
+Facebook曾在2010 ICDE（IEEE International Conference on Data Engineering）会议上介绍了数据仓库Hive。Hive存储海量数据在Hadoop系统中，提供了一套类数据库的数据存储和处理机制。它采用类SQL语言对数据进行自动化管理和处理，经过语句解析和转换，最终生成基于Hadoop的MapReduce任务，通过执行这些任务完成数据处理。下图显示了Hive数据仓库的系统结构。 
+
+Facebook在数据仓库上遇到的存储可扩展性的挑战是独一无二的。他们在基于Hive的数据仓库中存储了超过300PB的数据，并且以每日新增600TB的速度增长。去年这个数据仓库所存储的数据量增长了3倍。考虑到这个增长趋势，存储效率问题是facebook数据仓库基础设施方面目前乃至将来一段时间内最需要关注的。facebook工程师发表的RCFile: A Fast and Spaceefficient Data Placement Structure in MapReducebased Warehouse Systems一文，介绍了一种高效的数据存储结构——RCFile（Record Columnar File），并将其应用于Facebook的数据仓库Hive中。与传统数据库的数据存储结构相比，RCFile更有效地满足了基于MapReduce的数据仓库的四个关键需求，即Fast data loading、Fast query processing、Highly efficient storage space utilization和Strong adaptivity to highly dynamic workload patterns。RCFile 广泛应用于Facebook公司的数据分析系统Hive中。首先，RCFile具备相当于行存储的数据加载速度和负载适应能力；其次，RCFile的读优化可以在扫描表格时避免不必要的列读取，测试显示在多数情况下，它比其他结构拥有更好的性能；再次，RCFile使用列维度的压缩，因此能够有效提升存储空间利用率。
+
+为了提高存储空间利用率，Facebook各产品线应用产生的数据从2010年起均采用RCFile结构存储，按行存储（SequenceFile/TextFile）结构保存的数据集也转存为RCFile格式。此外，Yahoo公司也在Pig数据分析系统中集成了RCFile，RCFile正在用于另一个基于Hadoop的数据管理系统Howl（http://wiki.apache.org/pig/Howl）。而且，根据Hive开发社区的交流，RCFile也成功整合加入其他基于MapReduce的数据分析平台。有理由相信，作为数据存储标准的RCFile，将继续在MapReduce环境下的大规模数据分析中扮演重要角色。
+
+3、 RCFile 简介
+facebook 的数据仓库中数据被加载到表里面时首先使用的存储格式是Facebook自己开发的Record-Columnar File Format(RCFile)。RCFile是一种“允许按行查询，提供了列存储的压缩效率”的混合列存储格式。它的核心思想是首先把Hive表水平切分成多个行组（row groups），然后组内按照列垂直切分，这样列与列的数据在磁盘上就是连续的存储块了。
+当一个行组内的所有列写到磁盘时，RCFile就会以列为单位对数据使用类似zlib/lzo的算法进行压缩。当读取列数据的时候使用惰性解压策略（ lazy decompression），也就是说用户的某个查询如果只是涉及到一个表中的部分列的时候，RCFile会跳过不需要的列的解压缩和反序列化的过程。通过在facebook的数据仓库中选取有代表性的例子实验，RCFile能够提供5倍的压缩比。
+
+
+4、 超越RCFile，下一步采用什么方法
+随着数据仓库中存储的数据量持续增长，FB组内的工程师开始研究提高压缩效率的技术和方法。研究的焦点集中在列级别的编码方法，例如行程长度编码（run-length encoding）、词典编码（dictionary encoding）、参考帧编码（frame of reference encoding）、能够在通用压缩过程之前更好的在列级别降低逻辑冗余的数值编码方法。 FB 也尝试过新的列类型（例如JSON是在Facebook内部广泛使用的格式，把JSON格式的数据按照结构化的方式存储既可以满足高效查询的需求，同时也降低了JSON元数据存储的冗余）。
+FB的实验表明列级别的编码如果使用得当的话能够显著提高RCFile的压缩比。
+与此同时，Hortonworks也在尝试类似的思路去改进Hive的存储格式。Hortonworks的工程团队设计和实现了ORCFile（包括存储格式和读写接口），这帮助Facebook的数据仓库设计和实现新的存储格式提供了一个很好的开始。
+
+5、如何生成 RCFile 文件
+上面说了这么多，想必你已经知道 RCFile 主要用于提升 hive 的查询效率，那如何生成这种格式的文件呢？
+（1）hive 中直接 通过textfil e表进行insert转换
+
+例如：
+insert overwrite table http_RCTable partition(dt='2013-09-30') select p_id,tm,idate,phone from tmp_testp where dt='2013-09-30';
+（2）通过 mapreduce 生成
+目前为止，mapreduce 并没有提供内置 API 对 RCFile 进行支持，倒是 pig、hive、hcatalog 等 hadoop生态圈里的其他项目进行了支持，究其原因是因为 RCFile 相比 textfile 等其它文件格式，对于 mapreduce 的应用场景来说没有显著的优势。
+为了避免重复造轮子，下面的生成 RCFile 的 mapreduce 代码调用了 hive 和  hcatalog 的相关类 ，注意你在测试下面的代码时，你的 hadoop、hive、 hcatalog 版本要一致，否则。。。你懂的。。。
+比如我用的 hive-0.10.0+198-1.cdh4.4.0，那么就应该下载对应的版本： http://archive.cloudera.com/cdh4/cdh/4/
+
+PS：下面的代码已经测试通过，木有问题。
+
+import java.io.IOException;
+ 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hive.serde2.columnar.BytesRefArrayWritable;
+import org.apache.hadoop.hive.serde2.columnar.BytesRefWritable;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
+import org.apache.hcatalog.rcfile.RCFileMapReduceInputFormat;
+import org.apache.hcatalog.rcfile.RCFileMapReduceOutputFormat;
+ 
+ 
+ 
+public class TextToRCFile extends Configured implements Tool{
+  public static class Map 
+    	extends Mapper<Object, Text, NullWritable, BytesRefArrayWritable>{
+    
+    private byte[] fieldData;
+    private int numCols;
+    private BytesRefArrayWritable bytes;
+    
+    @Override
+    protected void setup(Context context) throws IOException, InterruptedException {
+      numCols = context.getConfiguration().getInt("hive.io.rcfile.column.number.conf", 0);
+      bytes = new BytesRefArrayWritable(numCols);
+    }
+    
+    public void map(Object key, Text line, Context context
+  ) throws IOException, InterruptedException {
+      bytes.clear();
+      String[] cols = line.toString().split("\\|");
+      System.out.println("SIZE : "+cols.length);
+      for (int i=0; i<numCols; i++){
+          	fieldData = cols[i].getBytes("UTF-8");
+          	BytesRefWritable cu = null;
+              cu = new BytesRefWritable(fieldData, 0, fieldData.length);
+              bytes.set(i, cu);
+          }
+      context.write(NullWritable.get(), bytes);
+    }
+  }
+  
+  @Override
+  public int run(String[] args) throws Exception {
+    Configuration conf = new Configuration();
+    String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
+    if(otherArgs.length < 2){
+      	System.out.println("Usage: " +
+      			"hadoop jar RCFileLoader.jar <main class> " +
+      			"-tableName <tableName> -numCols <numberOfColumns> -input <input path> " +
+      			"-output <output path> -rowGroupSize <rowGroupSize> -ioBufferSize <ioBufferSize>");
+      	System.out.println("For test");
+      	System.out.println("$HADOOP jar RCFileLoader.jar edu.osu.cse.rsam.rcfile.mapreduce.LoadTable " +
+      			"-tableName test1 -numCols 10 -input RCFileLoaderTest/test1 " +
+      			"-output RCFileLoaderTest/RCFile_test1");
+      	System.out.println("$HADOOP jar RCFileLoader.jar edu.osu.cse.rsam.rcfile.mapreduce.LoadTable " +
+      			"-tableName test2 -numCols 5 -input RCFileLoaderTest/test2 " +
+      			"-output RCFileLoaderTest/RCFile_test2");
+      	return 2;
+      }
+    
+    /* For test
+       
+     */
+    
+      
+    String tableName = "";
+    int numCols = 0;
+    String inputPath = "";
+    String outputPath = "";
+    int rowGroupSize = 16 *1024*1024;
+    int ioBufferSize = 128*1024;
+      for (int i=0; i<otherArgs.length - 1; i++){
+      	if("-tableName".equals(otherArgs[i])){
+      		tableName = otherArgs[i+1];
+      	}else if ("-numCols".equals(otherArgs[i])){
+      		numCols = Integer.parseInt(otherArgs[i+1]);
+      	}else if ("-input".equals(otherArgs[i])){
+      		inputPath = otherArgs[i+1];
+      	}else if("-output".equals(otherArgs[i])){
+      		outputPath = otherArgs[i+1];
+      	}else if("-rowGroupSize".equals(otherArgs[i])){
+      		rowGroupSize = Integer.parseInt(otherArgs[i+1]);
+      	}else if("-ioBufferSize".equals(otherArgs[i])){
+      		ioBufferSize = Integer.parseInt(otherArgs[i+1]);
+      	}
+      	
+      }
+      
+      conf.setInt("hive.io.rcfile.record.buffer.size", rowGroupSize);
+      conf.setInt("io.file.buffer.size", ioBufferSize);
+      
+      Job job = new Job(conf, "RCFile loader: loading table " + tableName + " with " + numCols + " columns");
+      
+      job.setJarByClass(TextToRCFile.class);
+      job.setMapperClass(Map.class);
+      job.setMapOutputKeyClass(NullWritable.class);
+      job.setMapOutputValueClass(BytesRefArrayWritable.class);
+//	    job.setNumReduceTasks(0);
+      
+      FileInputFormat.addInputPath(job, new Path(inputPath));
+      
+      job.setOutputFormatClass(RCFileMapReduceOutputFormat.class);
+      RCFileMapReduceOutputFormat.setColumnNumber(job.getConfiguration(), numCols);
+      RCFileMapReduceOutputFormat.setOutputPath(job, new Path(outputPath));
+      RCFileMapReduceOutputFormat.setCompressOutput(job, false);
+      
+      
+      System.out.println("Loading table " + tableName + " from " + inputPath + " to RCFile located at " + outputPath);
+      System.out.println("number of columns:" + job.getConfiguration().get("hive.io.rcfile.column.number.conf"));
+      System.out.println("RCFile row group size:" + job.getConfiguration().get("hive.io.rcfile.record.buffer.size"));
+      System.out.println("io bufer size:" + job.getConfiguration().get("io.file.buffer.size"));
+      
+      return (job.waitForCompletion(true) ? 0 : 1);
+  }
+  
+  public static void main(String[] args) throws Exception {
+      int res = ToolRunner.run(new Configuration(), new TextToRCFile(), args);
+      System.exit(res);
+  }
+}
+一、定义
+　　ORC File，它的全名是Optimized Row Columnar (ORC) file，其实就是对RCFile做了一些优化。据官方文档介绍，这种文件格式可以提供一种高效的方法来存储Hive数据。它的设计目标是来克服Hive其他格式的缺陷。运用ORC File可以提高Hive的读、写以及处理数据的性能。
+和RCFile格式相比，ORC File格式有以下优点：
+　　(1)、每个task只输出单个文件，这样可以减少NameNode的负载；
+　　(2)、支持各种复杂的数据类型，比如： datetime, decimal, 以及一些复杂类型(struct, list, map, and union)；
+　　(3)、在文件中存储了一些轻量级的索引数据；
+　　(4)、基于数据类型的块模式压缩：a、integer类型的列用行程长度编码(run-length encoding);b、String类型的列用字典编码(dictionary encoding)；
+　　(5)、用多个互相独立的RecordReaders并行读相同的文件；
+　　(6)、无需扫描markers就可以分割文件；
+　　(7)、绑定读写所需要的内存；
+　　(8)、metadata的存储是用 Protocol Buffers的，所以它支持添加和删除一些列。
+
+（6） 普通文本压缩成RcFile的通用类   https://github.com/ysmart-xx/ysmart/blob/master/javatest/TextToRCFile.java
+
+

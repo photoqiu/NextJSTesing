@@ -17,6 +17,10 @@ module.exports = withLess({
 })
 
 module.exports = {
+    reactStrictMode: true,
+}
+
+module.exports = {
     webpack: config => {
         config.node = {
             fs: 'empty'
